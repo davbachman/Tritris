@@ -1,6 +1,6 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
-import { Game, SHAPES, WIDTH, HEIGHT, area, bounds, rotate, rotateCounterclockwise, flip, shapeKey, worldPoints, polygonsOverlap, legalPlacement, supportedPlacement, highestPlacement, clearRows } from '../dist/engine.js';
+import { Game, SHAPES, WIDTH, HEIGHT, area, bounds, rotate, rotateCounterclockwise, flip, shapeKey, worldPoints, polygonsOverlap, legalPlacement, highestPlacement, clearRows } from '../dist/engine.js';
 
 const triangle = [[0, 0], [2, 0], [0, 2]];
 const piece = (x = 0, y = 18, points = triangle) => ({ id: 0, points, x, y });
@@ -69,7 +69,7 @@ test('polygon collisions allow edge and point contact but reject interior overla
   assert.equal(polygonsOverlap(triangle, triangle.map(([horizontal, vertical]) => [horizontal + 4, vertical]), true), false);
 });
 
-test('placement requires floor or piece contact, no interior overlap, and board bounds', () => {
+test('placement requires support below, no interior overlap, and board bounds', () => {
   assert.equal(legalPlacement(piece(), []), true);
   assert.equal(legalPlacement(piece(0, 17), []), false);
   assert.equal(legalPlacement(piece(-1), []), false);
@@ -94,7 +94,7 @@ test('automatic position is the topmost supported contact and preserves x', () =
 test('automatic placement skips sideways contact and lands on support below', () => {
   const wall = rectangle(2, 4, 4, 20);
   const active = piece(4, 1);
-  assert.equal(legalPlacement({ ...active, y: 2 }, [wall]), true);
+  assert.equal(legalPlacement({ ...active, y: 2 }, [wall]), false);
   assert.equal(highestPlacement(active, [wall]).y, 18);
   const platform = rectangle(4, 15, 6, 20);
   const supported = highestPlacement(active, [wall, platform]);
@@ -106,8 +106,7 @@ test('automatic placement skips sideways contact and lands on support below', ()
 test('automatic placement slides past a sideways vertex contact', () => {
   const settled = [{ id: 2, points: [[2, 8], [0, 6], [2, 6]] }];
   const active = piece(2, 1, [[0, 0], [2, 2], [0, 2]]);
-  assert.equal(legalPlacement({ ...active, y: 4 }, settled), true);
-  assert.equal(supportedPlacement({ ...active, y: 4 }, settled), false);
+  assert.equal(legalPlacement({ ...active, y: 4 }, settled), false);
   assert.equal(highestPlacement(active, settled).y, 18);
 });
 
@@ -117,8 +116,7 @@ test('automatic placement accepts diagonal and point support that blocks downwar
   const ledge = [rectangle(3, 12, 7, 13)];
   assert.equal(highestPlacement(piece(4, 1), ledge).y, 10);
   const underCeiling = piece(4, 13);
-  assert.equal(legalPlacement(underCeiling, ledge), true);
-  assert.equal(supportedPlacement(underCeiling, ledge), false);
+  assert.equal(legalPlacement(underCeiling, ledge), false);
   assert.equal(polygonsOverlap(worldPoints({ ...underCeiling, y: 13.001 }), ledge[0].points), false);
 });
 
@@ -145,11 +143,10 @@ test('automatic placement stays on full grid rows for all allowed orientations a
         assert.deepEqual(fallback.points, upper);
         assert.equal(Number.isInteger(fallback.y), true);
         assert.equal(legalPlacement(fallback, settled), true);
-        assert.equal(supportedPlacement(fallback, settled), true);
         const lowered = worldPoints({ ...fallback, y: fallback.y + .001 });
         assert.ok(bounds(lowered).bottom > HEIGHT || settled.some(existing => polygonsOverlap(lowered, existing.points)));
         for (let height = 0; height < fallback.y; height += 1) {
-          assert.equal(supportedPlacement({ ...active, y: height }, settled), false);
+          assert.equal(legalPlacement({ ...active, y: height }, settled), false);
         }
       }
     }
@@ -313,6 +310,30 @@ test('Space immediately resolves an illegal position using the fixed-column fall
   assert.equal(game.remaining, game.limit);
 });
 
+test('the photographed green triangle cannot lock onto the neighboring pink corner', () => {
+  for (const mirrored of [false, true]) {
+    const reflect = points => points.map(([horizontal, vertical]) => [mirrored ? WIDTH - horizontal : horizontal, vertical]);
+    for (const trigger of ['Space', 'timeout']) {
+      const game = new Game(() => .3);
+      game.start();
+      game.settled = [
+        { id: 2, points: reflect([[2, 17], [4, 17], [2, 19]]) },
+        { id: 2, points: reflect([[4, 19], [4, 17], [2, 19]]) },
+        { id: 1, points: reflect([[1, 18], [2, 19], [1, 20]]) },
+      ];
+      game.active = { ...piece(mirrored ? 8 : 1, 15, mirrored ? [[0, 0], [1, 1], [0, 2]] : [[1, 0], [0, 1], [1, 2]]), id: 1 };
+      assert.equal(legalPlacement(game.active, game.settled), false);
+      assert.equal(highestPlacement(game.active, game.settled).y, 17);
+      if (trigger === 'Space') game.place();
+      else game.tick(game.remaining);
+      assert.equal(game.mode, 'playing');
+      assert.equal(game.placed, 1);
+      assert.deepEqual(game.settled.at(-1).points, reflect([[2, 17], [1, 18], [2, 19]]));
+      assert.equal(game.limit, 9.95);
+    }
+  }
+});
+
 test('a legal current position stays put even when a higher legal position exists', () => {
   for (const trigger of ['Space', 'timeout']) {
     const game = new Game(() => .3);
@@ -329,20 +350,19 @@ test('a legal current position stays put even when a higher legal position exist
   }
 });
 
-test('Space and timeout use support below only when the current position is illegal', () => {
+test('Space and timeout drop floating and sideways-only positions onto support below', () => {
   for (const trigger of ['Space', 'timeout']) {
     for (const currentY of [1, 6]) {
       const game = new Game(() => .3);
       game.start();
       game.settled = [rectangle(2, 4, 4, 20), rectangle(4, 15, 6, 20)];
       game.active = piece(4, currentY);
-      const expectedY = currentY === 1 ? 13 : currentY;
-      assert.equal(legalPlacement(game.active, game.settled), currentY === 6);
+      assert.equal(legalPlacement(game.active, game.settled), false);
       if (trigger === 'Space') game.place();
       else game.tick(game.remaining);
       assert.equal(game.mode, 'playing', trigger);
       assert.equal(game.placed, 1, trigger);
-      assert.deepEqual(game.settled[2].points, worldPoints(piece(4, expectedY)), trigger);
+      assert.deepEqual(game.settled[2].points, worldPoints(piece(4, 13)), trigger);
     }
   }
 });

@@ -110,7 +110,7 @@ try {
   await regressionPage.screenshot({ path: new URL('bottom-left-pocket-placed.png', output).pathname, fullPage: true });
 
   const supportedResults = [];
-  for (const scenario of ['Space', 'timeout', 'floor', 'legal-side']) {
+  for (const scenario of ['Space', 'timeout', 'floor', 'side-contact']) {
     await regressionPage.reload({ waitUntil: 'networkidle' });
     await regressionPage.evaluate(async scenario => {
       const { Game } = await import('./engine.js');
@@ -126,19 +126,19 @@ try {
           addSquare(4, 16);
           addSquare(4, 18);
         }
-        this.active = { id: 2, points: [[0, 0], [2, 0], [0, 2]], x: 4, y: scenario === 'legal-side' ? 7 : 2 };
+        this.active = { id: 2, points: [[0, 0], [2, 0], [0, 2]], x: 4, y: scenario === 'side-contact' ? 7 : 2 };
       };
     }, scenario);
     await regressionPage.locator('#start-button').click();
     await regressionPage.evaluate(() => window.advanceTime(0));
     const before = await regressionPage.evaluate(() => JSON.parse(window.render_game_to_text()));
-    assert.equal(before.active.legal, scenario === 'legal-side');
+    assert.equal(before.active.legal, false);
     assert.equal(before.active.automaticY, scenario === 'floor' ? 18 : 14);
     if (scenario === 'Space') await regressionPage.screenshot({ path: new URL('supported-fallback-preview.png', output).pathname, fullPage: true });
     if (scenario === 'timeout') await regressionPage.evaluate(milliseconds => window.advanceTime(milliseconds), before.timer * 1000 + 1);
     else await regressionPage.keyboard.press('Space');
     const after = await regressionPage.evaluate(() => JSON.parse(window.render_game_to_text()));
-    const expectedY = scenario === 'legal-side' ? 7 : before.active.automaticY;
+    const expectedY = before.active.automaticY;
     assert.equal(after.mode, 'playing');
     assert.equal(after.placed, 1);
     assert.deepEqual(after.settled.at(-1).vertices, [[4, expectedY], [6, expectedY], [4, expectedY + 2]]);
@@ -147,6 +147,42 @@ try {
     if (scenario === 'Space') await regressionPage.screenshot({ path: new URL('supported-fallback-placed.png', output).pathname, fullPage: true });
   }
   await writeFile(new URL('supported-fallback-state.json', output), JSON.stringify(supportedResults, null, 2));
+
+  const cornerResults = [];
+  await regressionPage.setViewportSize({ width: 390, height: 844 });
+  for (const trigger of ['Space', 'timeout', 'touch']) {
+    await regressionPage.reload({ waitUntil: 'networkidle' });
+    await regressionPage.evaluate(async () => {
+      const { Game } = await import('./engine.js');
+      const originalStart = Game.prototype.start;
+      Game.prototype.start = function () {
+        originalStart.call(this);
+        this.settled = [
+          { id: 2, points: [[2, 17], [4, 17], [2, 19]] },
+          { id: 2, points: [[4, 19], [4, 17], [2, 19]] },
+          { id: 1, points: [[1, 18], [2, 19], [1, 20]] },
+        ];
+        this.active = { id: 1, points: [[1, 0], [0, 1], [1, 2]], x: 1, y: 15 };
+      };
+    });
+    await regressionPage.locator('#start-button').click();
+    await regressionPage.evaluate(() => window.advanceTime(0));
+    const before = await regressionPage.evaluate(() => JSON.parse(window.render_game_to_text()));
+    assert.equal(before.active.legal, false);
+    assert.equal(before.active.automaticY, 17);
+    if (trigger === 'Space') await regressionPage.screenshot({ path: new URL('photo-corner-before.png', output).pathname, fullPage: true });
+    if (trigger === 'timeout') await regressionPage.evaluate(milliseconds => window.advanceTime(milliseconds), before.timer * 1000 + 1);
+    else if (trigger === 'touch') await regressionPage.locator('[data-action="place"]').click();
+    else await regressionPage.keyboard.press('Space');
+    const after = await regressionPage.evaluate(() => JSON.parse(window.render_game_to_text()));
+    assert.equal(after.mode, 'playing');
+    assert.equal(after.placed, 1);
+    assert.equal(after.settled.at(-1).family, 1);
+    assert.deepEqual(after.settled.at(-1).vertices, [[2, 17], [1, 18], [2, 19]]);
+    cornerResults.push({ trigger, before, after });
+    if (trigger === 'touch') await regressionPage.screenshot({ path: new URL('photo-corner-after.png', output).pathname, fullPage: true });
+  }
+  await writeFile(new URL('photo-corner-state.json', output), JSON.stringify(cornerResults, null, 2));
   await regressionPage.close();
 
   await page.goto('http://localhost:5173', { waitUntil: 'networkidle' });

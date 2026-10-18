@@ -148,7 +148,7 @@ function render() {
     try { localStorage.setItem('tritris-best', String(best)); } catch {}
   }
   elements['best-value'].textContent = best;
-  if (game.mode === 'playing') elements['placement-status'].textContent = legalPlacement(game.active, game.settled) ? 'Connected. Space to make it stick.' : 'Space to place at the highest supported spot.';
+  if (game.mode === 'playing') elements['placement-status'].textContent = legalPlacement(game.active, game.settled) ? 'Supported. Space to make it stick.' : 'Space to place at the highest supported spot.';
   else if (game.mode === 'paused') elements['placement-status'].textContent = 'Clock stopped. Take a breath.';
   else if (game.mode === 'over') elements['placement-status'].textContent = 'There’s always another angle.';
   const signature = `${game.queue.join(',')}/${game.held}/${game.holdUsed}`;

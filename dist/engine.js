@@ -100,7 +100,7 @@ export function legalPlacement(piece, settled) {
   const box = bounds(points);
   if (box.left < -EPSILON || box.right > WIDTH + EPSILON || box.top < -EPSILON || box.bottom > HEIGHT + EPSILON) return false;
   if (settled.some(existing => polygonsOverlap(points, existing.points))) return false;
-  return Math.abs(box.bottom - HEIGHT) < EPSILON || settled.some(existing => polygonsOverlap(points, existing.points, true));
+  return Math.abs(box.bottom - HEIGHT) < EPSILON || settled.some(existing => blocksDownwardMotion(points, existing.points));
 }
 
 function blocksDownwardMotion(first, second) {
@@ -127,19 +127,13 @@ function blocksDownwardMotion(first, second) {
   return true;
 }
 
-export function supportedPlacement(piece, settled) {
-  if (!legalPlacement(piece, settled)) return false;
-  const points = worldPoints(piece);
-  return Math.abs(bounds(points).bottom - HEIGHT) < EPSILON || settled.some(existing => blocksDownwardMotion(points, existing.points));
-}
-
 export function highestPlacement(piece, settled) {
   const box = bounds(piece.points);
   const minimumY = Math.ceil(-box.top);
   const maximumY = Math.floor(HEIGHT - box.bottom);
   for (let vertical = minimumY; vertical <= maximumY; vertical += 1) {
     const candidate = { ...piece, y: vertical };
-    if (supportedPlacement(candidate, settled)) return candidate;
+    if (legalPlacement(candidate, settled)) return candidate;
   }
   return null;
 }
