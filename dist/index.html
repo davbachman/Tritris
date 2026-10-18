@@ -1,0 +1,106 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <meta name="theme-color" content="#111a16">
+  <meta name="description" content="A new angle on Tetris. Stack three triangle families with horizontal, vertical, and 45-degree edges before the clock runs out.">
+  <title>Tritris — A new angle on a classic</title>
+  <link rel="icon" href="./favicon.svg" type="image/svg+xml">
+  <link rel="stylesheet" href="./style.css">
+  <script type="module" src="./app.js"></script>
+</head>
+<body>
+  <header class="site-header">
+    <a class="brand" href="./" aria-label="Tritris home"><svg viewBox="0 0 36 36" aria-hidden="true"><path d="M3 31 18 5l15 26Z"/><path d="m18 5 1 26H3"/></svg><span>tritris<span class="brand-dot">.</span></span></a>
+    <span class="header-note">LESS FALLING. MORE THINKING.</span>
+    <button class="help-button" id="help-button"><span class="question-mark">?</span> How to play</button>
+  </header>
+
+  <main>
+    <section class="intro" aria-label="About the game">
+      <div class="eyebrow"><span></span> THE TRIANGLE STACKER</div>
+      <h1>A new angle on a classic.</h1>
+      <p>Three shapes. Ten seconds. Make every angle count.</p>
+    </section>
+
+    <div class="game-layout">
+      <aside class="left-sidebar">
+        <section class="panel hold-panel">
+          <div class="panel-heading"><h2>HOLD</h2><kbd>C</kbd></div>
+          <div class="hold-preview" id="hold-preview"><span class="empty-hold">Room for a<br>second thought.</span></div>
+          <p class="panel-caption" id="hold-caption">Save a shape for later</p>
+        </section>
+        <section class="controls-panel">
+          <h2>MAKE YOUR MOVE</h2>
+          <div class="control-row"><span class="arrow-cluster"><kbd>←</kbd><kbd>↓</kbd><kbd>→</kbd></span><span>Move</span></div>
+          <div class="control-row"><kbd>W</kbd><span>Rotate clockwise</span></div>
+          <div class="control-row"><kbd>↑</kbd><span>Rotate counterclockwise</span></div>
+          <div class="control-row"><kbd class="wide-key">space</kbd><span>Place piece</span></div>
+          <div class="control-row"><kbd>C</kbd><span>Hold piece</span></div>
+          <div class="control-row"><kbd>P</kbd><span>Pause</span></div>
+        </section>
+        <div class="little-note"><svg viewBox="0 0 26 28" aria-hidden="true"><path d="M2 25 13 4l11 21Z"/><path d="m13 4 2 21"/></svg><p>No falling pieces.<br>Just a ticking clock.</p></div>
+      </aside>
+
+      <section class="board-column" aria-label="Tritris game">
+        <div class="board-topline"><span><i class="live-dot"></i><span id="board-state">READY WHEN YOU ARE</span></span><span>10 × 20</span></div>
+        <div class="board-frame" id="board-frame">
+          <canvas id="board" width="640" height="1280" tabindex="0" aria-label="10 by 20 Tritris board. Left, right, and down move; Up rotates counterclockwise, W rotates clockwise, Space places, and C holds."></canvas>
+          <div class="board-overlay" id="board-overlay">
+            <div class="overlay-symbol" aria-hidden="true">△</div>
+            <p class="overlay-eyebrow" id="overlay-eyebrow">TETRIS, WITH A TWIST</p>
+            <h2 id="overlay-title">Find your<br>angle.</h2>
+            <p class="overlay-description" id="overlay-description">Place your triangle.<br>Beat the clock. Keep it together.</p>
+            <button class="primary-button" id="start-button">Let’s play <span>↗</span></button>
+            <span class="overlay-hint" id="overlay-hint">or press enter</span>
+          </div>
+          <div class="board-toast" id="board-toast" role="status" aria-live="polite"></div>
+        </div>
+        <div class="board-bottomline"><span id="placement-status">A little geometry. A little pressure.</span><button id="pause-button" class="pause-button" disabled aria-label="Pause game"><span id="pause-icon">Ⅱ</span> <span id="pause-label">Pause</span></button></div>
+      </section>
+
+      <aside class="right-sidebar">
+        <section class="timer-panel panel">
+          <div class="panel-heading"><h2>TIME TO PLACE</h2><span class="clock-icon" aria-hidden="true">◷</span></div>
+          <div class="timer-number"><span id="timer-value">10.0</span><span>s</span></div>
+          <div class="timer-track"><div id="timer-fill"></div></div>
+          <p class="panel-caption" id="timer-caption">A fresh start. Take your time.</p>
+        </section>
+        <section class="panel next-panel">
+          <div class="panel-heading"><h2>UP NEXT</h2><span class="muted">03</span></div>
+          <ol class="next-list" id="next-list" aria-label="Next three pieces"></ol>
+        </section>
+        <section class="score-panel">
+          <div class="score-main"><h2>SCORE</h2><strong id="score-value">0000</strong></div>
+          <div class="score-row"><span>Pieces placed</span><strong id="pieces-value">0</strong></div>
+          <div class="score-row"><span>Lines cleared</span><strong id="lines-value">0</strong></div>
+          <div class="score-row best-row"><span>Personal best</span><strong id="best-value">0</strong></div>
+        </section>
+      </aside>
+    </div>
+
+    <div class="touch-controls" aria-label="On-screen controls">
+      <div><button data-action="left" aria-label="Move left">←</button><button data-action="down" aria-label="Move down">↓</button><button data-action="right" aria-label="Move right">→</button></div>
+      <div><button data-action="rotateCounterclockwise" aria-label="Rotate counterclockwise">↶ <span>Rotate</span></button><button data-action="rotate" aria-label="Rotate clockwise">↻ <span>Rotate</span></button><button data-action="hold">C <span>Hold</span></button><button data-action="place" class="place-control">Place ↗</button></div>
+    </div>
+
+    <footer class="game-footer"><span class="footer-triangle">△</span><p>Touch the stack. Fill a row. Stay below the top.</p><span class="footer-label">A GAME OF GOOD ANGLES</span></footer>
+  </main>
+
+  <dialog id="help-dialog" aria-labelledby="help-title">
+    <button id="close-help" class="close-dialog" aria-label="Close instructions">×</button>
+    <div class="eyebrow">A QUICK FIELD GUIDE</div>
+    <h2 id="help-title">A different kind<br>of building block.</h2>
+    <p>Place triangles on a classic <strong>10 × 20 grid</strong>. Every triangle uses three boundary points of a 2 × 2 grid, with only horizontal, vertical, or 45° diagonal edges. Grouping rotated copies leaves three distinct families, each with its own color.</p>
+    <ol class="rules-list">
+      <li><strong>You move. The pieces don’t fall.</strong><span>New pieces appear one grid row above the tallest part of the stack. Left, right, and down move one grid unit. Hold a movement key or on-screen arrow for steady movement. Up rotates counterclockwise; W rotates clockwise. A translucent triangle is your current piece.</span></li>
+      <li><strong>Make a connection.</strong><span>Touch the floor or any placed piece, even at a single point. Overlap is never allowed. Space places a legal piece where it is; otherwise it moves to the highest legal position supported from below by the floor or another piece, without changing columns. Sideways contact alone won’t stop it.</span></li>
+      <li><strong>Keep an eye on the clock.</strong><span>You begin with 10 seconds per piece. Each placement makes the next timer 0.5% shorter, down to 1 second. Time running out uses exactly the same placement rule as Space. Pieces and movement stay on whole grid points.</span></li>
+      <li><strong>Leave room to grow.</strong><span>Fill an entire horizontal row to clear it. Touching the top ends the game. If no supported legal position exists in the current column when an illegal piece is placed, the game also ends.</span></li>
+    </ol>
+    <p class="help-footnote">C holds a piece once per turn, without resetting the clock. P pauses. F toggles fullscreen.</p>
+    <button class="primary-button" id="got-it">Got it. Find an angle. <span>↗</span></button>
+  </dialog>
+</body>
+</html>
